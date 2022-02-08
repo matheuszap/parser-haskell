@@ -17,12 +17,56 @@ type Unifier = [(Name, Type)]
 -- { X |-> Y }
 --
 
-test :: Unifier
-test = [
-        ("X", TypeVar "Y")
-       ]
+whitespace :: Parser ()
+whitespace = do
+        many (char ' ')
+        return ()
+
+
+-- int: "Int"
+parseInt :: Parser Type
+parseInt = do
+        char 'I'
+        char 'n'
+        char 't'
+        return TypeInt
+
+-- var: lowercase+
+parseVar :: Parser Type
+parseVar = do
+        variable <- many1 lower
+        return (TypeVar variable)
+
+-- paren: "(" type ")"
+parseParen :: Parser Type 
+parseParen = do
+        char '('
+        atom <- parseAtom
+        char ')'
+        return atom
+
+-- atom: int | var | paren
+parseAtom :: Parser Type
+parseAtom = try
+        parseInt <|> parseVar <|> parseParen
+
+-- fun: atom "->" type
+parseFun :: Parser Type
+parseFun = do
+        atom <- parseAtom
+        whitespace
+        char '-'
+        char '>'
+        whitespace
+        TypeArrow atom <$> parseType
+
+-- type: function | atom
+parseType :: Parser Type
+parseType = try
+        parseFun <|> parseAtom
 
 main :: IO ()
 main = do
-    putStrLn "Hello, world!"
-    print test
+    putStrLn "Digite um termo:"
+    str <- getLine
+    print $ parse parseType "<stdin>" str
