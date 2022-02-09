@@ -109,9 +109,6 @@ occursCheck x (TypeArrow y z) =
 compose :: Unifier -> Unifier -> Unifier
 --compose xs ys = xs ++ ys
 
--- {d |-> a->b}(a) = a
--- {x |-> Int}(x) = Int
-
 subst :: Unifier -> Type -> Type
 subst uni TypeInt = TypeInt
 subst uni (TypeVar x) = case lookup x uni of
@@ -123,11 +120,13 @@ subst uni (TypeArrow y z) = TypeArrow (subst uni y) (subst uni z)
 -- 1st Case: TypeInt
 --
 -- subst [("x", TypeInt)] (TypeVar "x") --> {x |-> Int}(x)
+-- 2nd Case: lookup "x" [("x", TypeInt)] == Just TypeInt
+--                            TypeInt
 --
--- subst [("d", TypeArrow (TypeVar "a") (TypeVar "b"))] (TypeVar "d") --> {d |-> a->b}(d)
--- 3rd Case:
---
---
+-- subst [("x", TypeInt)] (TypeArrow (TypeVar "x") (TypeVar "y"))
+-- 3rd Case: TypeArrow (subst [("x", TypeInt)] (TypeArrow (TypeVar "x")) (subst [("x", TypeInt)] (TypeVar "y"))
+--                                             TypeArrow TypeInt (TypeVar "y") 
+--                                                      Int -> y
 
 
 -- unify :: Type -> Type -> Maybe Unifier
