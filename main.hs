@@ -17,11 +17,20 @@ type Unifier = [(Name, Type)]
 -- { X |-> Y }
 --
 
+-- Árvore de derivações: 
+--
+--                     parseType
+--                    /         \
+--               parseFun       parseAtom
+--                /   \             /  |  \
+--        parseAtom  parseType  pInt  pVar pParen
+--       /   |  \      /   \        
+--    ...  ...  ...  ...  ...
+
 whitespace :: Parser ()
 whitespace = do
         many (char ' ')
         return ()
-
 
 -- int: "Int"
 parseInt :: Parser Type
@@ -65,8 +74,31 @@ parseType :: Parser Type
 parseType = try
         parseFun <|> parseAtom
 
+-- unit: type eof
+unit :: Parser Type
+unit = do
+        t <- parseType
+        eof
+        return t
+
+occursCheck :: Name -> Type -> Bool
+occursCheck x TypeInt = 
+        False
+occursCheck x (TypeVar y) =
+         x == y
+occursCheck x (TypeArrow y z) =  
+        occursCheck x y || occursCheck x z
+
+--compose :: Unifer -> Unifier -> Unifier
+--compose xs ys = xs ++ ys
+
+-- unify :: Type -> Type -> Maybe Unifier
+
 main :: IO ()
 main = do
     putStrLn "Digite um termo:"
     str <- getLine
-    print $ parse parseType "<stdin>" str
+    print $ parse unit "<stdin>" str
+
+
+
