@@ -89,8 +89,46 @@ occursCheck x (TypeVar y) =
 occursCheck x (TypeArrow y z) =  
         occursCheck x y || occursCheck x z
 
---compose :: Unifer -> Unifier -> Unifier
+
+-- occursCheck "x" TypeInt
+-- 1st Case: False
+--
+-- occursCheck "x" (TypeVar "x")
+-- 2nd Case: True (x == y)
+--
+-- occursCheck "x" (TypeArrow (TypeVar "x") TypeInt)
+-- 3rd Case: occursCheck "x" (TypeVar "x") || occursCheck "x" TypeInt
+--                         True (2nd Case) || False (1st Case)
+--                                       True
+
+-- type Unifier = [(Name, Type)]
+
+-- compose: composição de duas substituições, retornando a união dos dados
+-- tento a primeira substituição aplicada a todos os termos da segunda substituição
+
+compose :: Unifier -> Unifier -> Unifier
 --compose xs ys = xs ++ ys
+
+-- {d |-> a->b}(a) = a
+-- {x |-> Int}(x) = Int
+
+subst :: Unifier -> Type -> Type
+subst uni TypeInt = TypeInt
+subst uni (TypeVar x) = case lookup x uni of
+                        Just n -> n
+                        Nothing -> TypeVar x
+subst uni (TypeArrow y z) = TypeArrow (subst uni y) (subst uni z)
+
+-- subst [("x", TypeInt)] TypeInt --> {x |-> Int}(Int)
+-- 1st Case: TypeInt
+--
+-- subst [("x", TypeInt)] (TypeVar "x") --> {x |-> Int}(x)
+--
+-- subst [("d", TypeArrow (TypeVar "a") (TypeVar "b"))] (TypeVar "d") --> {d |-> a->b}(d)
+-- 3rd Case:
+--
+--
+
 
 -- unify :: Type -> Type -> Maybe Unifier
 
