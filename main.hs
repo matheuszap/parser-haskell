@@ -89,7 +89,6 @@ occursCheck x (TypeVar y) =
 occursCheck x (TypeArrow y z) =  
         occursCheck x y || occursCheck x z
 
-
 -- occursCheck "x" TypeInt
 -- 1st Case: False
 --
@@ -105,10 +104,21 @@ occursCheck x (TypeArrow y z) =
 
 -- compose: composição de duas substituições, retornando a união dos dados
 -- tento a primeira substituição aplicada a todos os termos da segunda substituição
-
 compose :: Unifier -> Unifier -> Unifier
---compose xs ys = xs ++ ys
+compose xs ys = xs ++ fmap substElement ys
+                where 
+                substElement :: (Name, Type) -> (Name, Type)
+                substElement (x, e) = (x, subst xs e)
 
+--  compose [("b", TypeInt)] [("a", TypeInt)] --> (b -> Int) * (a -> Int)
+--  [("b", TypeInt)] ++ fmap substElement [("a", TypeInt)]
+--  [("b", TypeInt)] ++ fmap [("a", subst [("b", TypeInt)] TypeInt)]
+--  [("b", TypeInt)] ++ [("a", TypeInt)]
+--  [("b", TypeInt), ("a", TypeInt)]
+--      {b |-> Int, a |-> Int}
+
+
+-- subst: aplica a substituição a um tipo arbitrário, retornando um novo tipo
 subst :: Unifier -> Type -> Type
 subst uni TypeInt = TypeInt
 subst uni (TypeVar x) = case lookup x uni of
@@ -123,19 +133,77 @@ subst uni (TypeArrow y z) = TypeArrow (subst uni y) (subst uni z)
 -- 2nd Case: lookup "x" [("x", TypeInt)] == Just TypeInt
 --                            TypeInt
 --
--- subst [("x", TypeInt)] (TypeArrow (TypeVar "x") (TypeVar "y"))
+-- subst [("x", TypeInt)] (TypeArrow (TypeVar "x") (TypeVar "y")) --> {x |-> Int}(x -> y)
 -- 3rd Case: TypeArrow (subst [("x", TypeInt)] (TypeArrow (TypeVar "x")) (subst [("x", TypeInt)] (TypeVar "y"))
 --                                             TypeArrow TypeInt (TypeVar "y") 
 --                                                      Int -> y
 
+unify :: Type -> Type -> Maybe Unifier
+unify TypeInt TypeInt = Just []
+unify (TypeArrow x y) TypeInt = Nothing
+unify TypeInt (TypeArrow x y) = Nothing
+unify (TypeVar x) (TypeVar y) | x == y = Just []
+unify (TypeVar v) t = if occursCheck v t then Nothing else Just [(v, t)]
+unify t (TypeVar v) = if occursCheck v t then Nothing else Just [(v, t)] 
+unify (TypeArrow t1 r1) (TypeArrow t2 r2) = do
+        s1 <- unify t1 t2
+        s2 <- unify (subst s1 r1) (subst s1 r2)
+        return (compose s2 s1)
 
--- unify :: Type -> Type -> Maybe Unifier
+-- unify (TypeArrow (TypeVar "a") TypeInt) (TypeArrow TypeInt (TypeVar "b")) --> a -> Int ~ Int -> b
+-- s1 <- unify (TypeVar "a") TypeInt = Just [("a", TypeInt)]
+-- s2 <- unify (subst [("a", TypeInt)] TypeInt) (subst [("a", TypeInt)] (TypeVar "b")) = 
+--     = unify TypeInt (TypeVar "b")
+--     = Just [("b", TypeInt)]
+-- return (compose [("b", TypeInt)] [("a", TypeInt)])
+--      [("b", TypeInt), ("a", TypeInt)]
+--     = {b |-> Int, a |-> Int}
+--
+--
+-- Regras:
+--
+--    ------------------ (REFL)
+--        a ~ a = {}
+--
+--
+--       a não aparece livre em t
+--    ---------------------------- (LEFT)
+--        a ~ t = { a |-> t }
+--       ^^^^^
+--
+--
+--      a não aparece livre em t
+--  ---------------------------- (RIGHT)
+--      t ~ a = { a |-> t }
+--      ^^^^^
+--
+--
+--    ---------------------- (INT)
+--        int ~ int = {}
+--
+--
+--        t1 ~ t2 = s1        s1(r1) ~ s1(r2) = s2
+--    ------------------------------------------------- (ARROW)
+--        t1 -> r1    ~   t2 -> r2    =    s2 * s1
+--
+
 
 main :: IO ()
 main = do
-    putStrLn "Digite um termo:"
-    str <- getLine
-    print $ parse unit "<stdin>" str
 
+  putStrLn "Digite o primeiro termo:"
+  str1 <- getLine
+  putStrLn "Digite o segundo termo:"
+  str2 <- getLine
+
+  case (parse unit "primeiro" str1, parse unit "segundo" str2) of
+    (Right e1, Right e2) -> do
+
+      putStrLn "Unificação:"
+      print $ unify e1 e2
+    (Left err, _) -> do
+      print err
+    (_, Left err) -> do
+      print err
 
 
