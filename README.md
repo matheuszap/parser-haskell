@@ -4,5 +4,5 @@
 
 ### Como rodar
 
-- $runhaskell main.hs$
+> runhaskell main.hs
 
