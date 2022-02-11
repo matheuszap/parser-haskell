@@ -2,7 +2,7 @@
 
 - Alunos: Matheus Zap, Lucas Rocha
 
-### Como rodar
+### Como rodar:
 
 > runhaskell main.hs
 
